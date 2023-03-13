@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/delichik/mfk/config"
@@ -68,8 +67,6 @@ func (a *App) Run() {
 	a.l = logger.NewLogger("app")
 	a.l.Info("App init")
 
-	wg := sync.WaitGroup{}
-
 	a.l.Info("Loading app modules")
 	for _, module := range a.orderedModules {
 		cfg := a.cm.GetModuleConfig(module.Name())
@@ -90,11 +87,6 @@ func (a *App) Run() {
 					zap.Error(err))
 			}
 		}
-		wg.Add(1)
-		go func(module Module) {
-			defer wg.Done()
-			module.WaitExit()
-		}(module)
 	}
 
 	signalChan := make(chan os.Signal, 1)
@@ -102,7 +94,16 @@ func (a *App) Run() {
 	<-signalChan
 	signal.Stop(signalChan)
 	a.l.Info("App shutdown")
-	wg.Wait()
+
+	for _, module := range a.orderedModules {
+		cfg := a.cm.GetModuleConfig(module.Name())
+		if cfg == nil {
+			continue
+		}
+		module.Exit()
+		module.WaitExit()
+	}
+	a.cancel()
 }
 
 func (a *App) ReloadConfig(name string, cfg config.ModuleConfig) {
