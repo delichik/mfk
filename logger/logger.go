@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/delichik/my-go-pkg/config"
+	"github.com/delichik/mfk/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"

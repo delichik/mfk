@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/delichik/my-go-pkg/config"
+	"github.com/delichik/mfk/config"
 )
 
 type DynamicModule struct{}

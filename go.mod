@@ -1,4 +1,4 @@
-module github.com/delichik/my-go-pkg
+module github.com/delichik/mfk
 
 go 1.18
 

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/delichik/my-go-pkg/config"
-	"github.com/delichik/my-go-pkg/logger"
+	"github.com/delichik/mfk/config"
+	"github.com/delichik/mfk/logger"
 	"go.uber.org/zap"
 )
 
@@ -59,7 +59,6 @@ func (a *App) RegisterModule(module Module) {
 }
 
 func (a *App) Run() {
-	a.l.Info("App init")
 	err := a.cm.Init()
 	if err != nil {
 		log.Println("Init config failed, exit")
@@ -67,6 +66,7 @@ func (a *App) Run() {
 	}
 	a.cm.SetReloadCallback(a.ReloadConfig)
 	a.l = logger.NewLogger("app")
+	a.l.Info("App init")
 
 	wg := sync.WaitGroup{}
 

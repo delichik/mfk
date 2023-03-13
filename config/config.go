@@ -3,18 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
-	"time"
+	"os"
 
 	"gopkg.in/yaml.v3"
 
-	myyaml "github.com/delichik/my-go-pkg/yaml"
+	myyaml "github.com/delichik/mfk/yaml"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 type ConfigSet interface {
 	// GetModuleConfig 获取 Config。
@@ -65,7 +59,7 @@ func Load(path string) (*Config, error) {
 		config.moduleConfigs[moduleName] = moduleConfig.Clone()
 	}
 
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err == nil {
 		t := map[string]yaml.Node{}
 		err = yaml.Unmarshal(b, &t)
@@ -102,7 +96,7 @@ func Save(path string, config *Config) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path, b, 0655)
+	err = os.WriteFile(path, b, 0655)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/delichik/my-go-pkg/config"
+	"github.com/delichik/mfk/config"
 )
 
 func TestConfig_NewLogger(t *testing.T) {
