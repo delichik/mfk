@@ -14,12 +14,13 @@ import (
 )
 
 type App struct {
-	modules        map[string]Module
-	orderedModules []Module
-
-	cm     *config.Manager
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	cm             *config.Manager
+	afterRunCall   func()
+	modules        map[string]Module
+	orderedModules []Module
 }
 
 type CommandLineVars struct {
@@ -56,6 +57,10 @@ func (a *App) RegisterModule(module Module) {
 	a.orderedModules = append(a.orderedModules, module)
 }
 
+func (a *App) AfterRun(call func()) {
+	a.afterRunCall = call
+}
+
 func (a *App) Run() {
 	err := a.cm.Init()
 	if err != nil {
@@ -86,6 +91,10 @@ func (a *App) Run() {
 				zap.String("name", module.Name()),
 				zap.Error(err))
 		}
+	}
+	logger.Info("App modules loaded")
+	if a.afterRunCall != nil {
+		a.afterRunCall()
 	}
 
 	signalChan := make(chan os.Signal, 1)
