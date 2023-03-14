@@ -114,7 +114,3 @@ func Init(c config.ConfigSet) {
 	}
 	defaultLogger = zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
 }
-
-func NewLogger(moduleName string) *zap.Logger {
-	return defaultLogger.With(zap.String("module", moduleName))
-}

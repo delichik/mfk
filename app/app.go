@@ -17,7 +17,6 @@ type App struct {
 	modules        map[string]Module
 	orderedModules []Module
 
-	l      *zap.Logger
 	cm     *config.Manager
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -64,28 +63,28 @@ func (a *App) Run() {
 		return
 	}
 	a.cm.SetReloadCallback(a.ReloadConfig)
-	a.l = logger.NewLogger("app")
-	a.l.Info("App init")
+	logger.Init(a.cm)
+	logger.Info("App init")
 
-	a.l.Info("Loading app modules")
+	logger.Info("Loading app modules")
 	for _, module := range a.orderedModules {
 		cfg := a.cm.GetModuleConfig(module.Name())
 		if cfg == nil {
-			a.l.Debug("Skip module", zap.String("name", module.Name()))
+			logger.Debug("Skip module", zap.String("name", module.Name()))
 			continue
 		}
-		a.l.Debug("Applying module config", zap.String("name", module.Name()))
+		logger.Debug("Applying module config", zap.String("name", module.Name()))
 		err := module.ApplyConfig(cfg)
 		if err != nil {
-			if module.Critical() {
-				a.l.Fatal("Apply critical module config failed, exit",
-					zap.String("name", module.Name()),
-					zap.Error(err))
-			} else {
-				a.l.Error("Apply module config failed",
-					zap.String("name", module.Name()),
-					zap.Error(err))
-			}
+			logger.Fatal("Apply module config failed, exit",
+				zap.String("name", module.Name()),
+				zap.Error(err))
+		}
+		err = module.Run(a.ctx)
+		if err != nil {
+			logger.Fatal("Run module failed",
+				zap.String("name", module.Name()),
+				zap.Error(err))
 		}
 	}
 
@@ -93,7 +92,7 @@ func (a *App) Run() {
 	signal.Notify(signalChan, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-signalChan
 	signal.Stop(signalChan)
-	a.l.Info("App shutdown")
+	logger.Info("App shutdown")
 
 	for _, module := range a.orderedModules {
 		cfg := a.cm.GetModuleConfig(module.Name())
@@ -101,7 +100,6 @@ func (a *App) Run() {
 			continue
 		}
 		module.Exit()
-		module.WaitExit()
 	}
 	a.cancel()
 }
@@ -111,17 +109,11 @@ func (a *App) ReloadConfig(name string, cfg config.ModuleConfig) {
 	if !ok {
 		return
 	}
-	a.l.Info("Reloading module config", zap.String("name", name))
+	logger.Info("Reloading module config", zap.String("name", name))
 	err := module.ApplyConfig(cfg)
 	if err != nil {
-		if module.Critical() {
-			a.l.Fatal("Apply critical module config failed, exit",
-				zap.String("name", name),
-				zap.Error(err))
-		} else {
-			a.l.Error("Apply module config failed",
-				zap.String("name", name),
-				zap.Error(err))
-		}
+		logger.Error("Apply module config failed",
+			zap.String("name", name),
+			zap.Error(err))
 	}
 }
