@@ -42,7 +42,7 @@ func (m *Manager) Init() error {
 	}
 	m.locker.Unlock()
 
-	err = Save(m.path, m.c)
+	err = save(m.path, m.c)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,13 @@ func (m *Manager) watchConfig() {
 		select {
 		case <-timer.C:
 			m.locker.Lock()
-			newConfig, err := Load(m.path)
+			newConfig, err := load(m.path)
+			if err != nil {
+				log.Println("Config file load failed:", err.Error(), ", abort to load")
+				m.locker.Unlock()
+				continue
+			}
+			err = check(newConfig)
 			if err != nil {
 				log.Println("Config file load failed:", err.Error(), ", abort to load")
 				m.locker.Unlock()
@@ -105,7 +111,7 @@ func (m *Manager) ModifyModuleConfig(moduleName string, call func(ModuleConfig))
 	m.locker.Lock()
 	defer m.locker.Unlock()
 	call(mc)
-	err := Save(m.path, m.c)
+	err := save(m.path, m.c)
 	if err != nil {
 		return err
 	}

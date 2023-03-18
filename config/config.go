@@ -52,11 +52,30 @@ func RegisterModuleConfig(moduleName string, defaultConfig ModuleConfig) {
 }
 
 func Load(path string) (*Config, error) {
-	config := &Config{
+	cfg, err := load(path)
+	if err != nil {
+		return nil, err
+	}
+
+	err = save(path, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = check(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func load(path string) (*Config, error) {
+	cfg := &Config{
 		moduleConfigs: map[string]ModuleConfig{},
 	}
 	for moduleName, moduleConfig := range moduleDefaultConfigs {
-		config.moduleConfigs[moduleName] = moduleConfig.Clone()
+		cfg.moduleConfigs[moduleName] = moduleConfig.Clone()
 	}
 
 	b, err := os.ReadFile(path)
@@ -68,30 +87,17 @@ func Load(path string) (*Config, error) {
 		}
 
 		for k, v := range t {
-			c, ok := config.moduleConfigs[k]
+			c, ok := cfg.moduleConfigs[k]
 			if !ok {
 				continue
 			}
 			_ = v.Decode(c)
 		}
 	}
-
-	err = Save(path, config)
-	if err != nil {
-		return nil, err
-	}
-
-	for moduleName, moduleConfig := range config.moduleConfigs {
-		err = moduleConfig.Check()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", moduleName, err)
-		}
-	}
-
-	return config, nil
+	return cfg, nil
 }
 
-func Save(path string, config *Config) error {
+func save(path string, config *Config) error {
 	b, err := myyaml.MarshallWithComments(config.moduleConfigs)
 	if err != nil {
 		return err
@@ -99,6 +105,16 @@ func Save(path string, config *Config) error {
 	err = os.WriteFile(path, b, 0655)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func check(cfg *Config) error {
+	for moduleName, moduleConfig := range cfg.moduleConfigs {
+		err := moduleConfig.Check()
+		if err != nil {
+			return fmt.Errorf("%s: %w", moduleName, err)
+		}
 	}
 	return nil
 }
