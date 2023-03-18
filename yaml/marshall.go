@@ -50,12 +50,20 @@ func addComments(node *yaml.Node, v reflect.Value) {
 		for i, n := range node.Content {
 			addComments(n, v.Index(i))
 		}
-		break
 	case reflect.Map:
-		fallthrough
+		keys := v.MapKeys()
+		for _, k := range keys {
+			f := v.MapIndex(k)
+			for j, n := range node.Content {
+				if j&1 == 0 {
+					if n.Value == k.String() {
+						addComments(node.Content[j+1], f)
+						break
+					}
+				}
+			}
+		}
 	case reflect.Struct:
-		fallthrough
-	case reflect.Interface:
 		for i := 0; i < v.Type().NumField(); i++ {
 			f := v.Type().Field(i)
 			for j, n := range node.Content {
@@ -67,6 +75,5 @@ func addComments(node *yaml.Node, v reflect.Value) {
 				}
 			}
 		}
-		break
 	}
 }
