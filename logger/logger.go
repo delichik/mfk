@@ -87,7 +87,7 @@ func (c *Config) Compare(config.ModuleConfig) bool {
 
 var defaultLogger *zap.Logger
 
-var loggers map[string]*zap.Logger
+var loggers = make(map[string]*zap.Logger)
 
 func InitDefault(c config.ConfigSet) {
 	defaultLogger = Init(ModuleName, c)
