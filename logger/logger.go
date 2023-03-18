@@ -19,7 +19,7 @@ const (
 var defaultLoggerConfig = &Config{
 	Level:     "info",
 	Format:    "text",
-	LogPath:   "module.log",
+	LogPath:   "logs/logger.log",
 	MaxSize:   50,
 	MaxBackup: 1,
 	MaxAge:    30,
