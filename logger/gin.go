@@ -15,7 +15,7 @@ import (
 
 // GinLogger logger func for gin
 func GinLogger(moduleName string) gin.HandlerFunc {
-	logger := loggers[moduleName]
+	logger := loggers[moduleName+"-logger"]
 	if logger == nil {
 		panic("logger not found")
 	}
@@ -41,7 +41,7 @@ func GinLogger(moduleName string) gin.HandlerFunc {
 
 // GinRecovery recovery func for gin
 func GinRecovery(moduleName string) gin.HandlerFunc {
-	logger := loggers[moduleName]
+	logger := loggers[moduleName+"-logger"]
 	if logger == nil {
 		panic("logger not found")
 	}
