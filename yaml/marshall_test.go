@@ -16,6 +16,7 @@ func TestMarshallWithComments(t *testing.T) {
 		E interface{} `yaml:"e" comment:"eee"`
 		F interface{} `yaml:"f" comment:"fff"`
 		G []C         `yaml:"g" comment:"ggg"`
+		I C           `yaml:"i"`
 	}
 
 	u := &T{

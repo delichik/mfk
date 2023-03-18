@@ -42,51 +42,31 @@ func addComments(node *yaml.Node, v reflect.Value) {
 			v = v.Elem()
 		}
 	}
-	if v.Kind() == reflect.Struct {
+
+	switch v.Kind() {
+	case reflect.Array:
+		fallthrough
+	case reflect.Slice:
+		for i, n := range node.Content {
+			addComments(n, v.Index(i))
+		}
+		break
+	case reflect.Map:
+		fallthrough
+	case reflect.Struct:
+		fallthrough
+	case reflect.Interface:
 		for i := 0; i < v.Type().NumField(); i++ {
 			f := v.Type().Field(i)
 			for j, n := range node.Content {
 				if j&1 == 0 {
 					if f.Tag.Get("yaml") == n.Value {
-						switch f.Type.Kind() {
-						case reflect.Map:
-							fallthrough
-						case reflect.Struct:
-							fallthrough
-						case reflect.Pointer:
-							fallthrough
-						case reflect.Array:
-							fallthrough
-						case reflect.Slice:
-							fallthrough
-						case reflect.Interface:
-							addComments(node.Content[j+1], v.Field(i))
-							fallthrough
-						default:
-							c := f.Tag.Get("comment")
-							node.Content[j+1].LineComment = c
-							n.LineComment = c
-						}
-						break
+						addComments(node.Content[j+1], v.Field(i))
+						n.HeadComment = v.Type().Field(i).Tag.Get("comment")
 					}
 				}
 			}
 		}
-	} else if v.Kind() == reflect.Array || v.Kind() == reflect.Slice {
-		for i := 0; i < v.Len(); i++ {
-			f := v.Index(i)
-			addComments(node.Content[i], f)
-		}
-	} else if v.Kind() == reflect.Map {
-		keys := v.MapKeys()
-		for _, k := range keys {
-			f := v.MapIndex(k)
-			for j, n := range node.Content {
-				if n.Value == k.String() {
-					addComments(node.Content[j+1], f)
-					break
-				}
-			}
-		}
+		break
 	}
 }
