@@ -64,7 +64,7 @@ func (a *App) AfterRun(call func()) {
 func (a *App) Run() {
 	err := a.cm.Init()
 	if err != nil {
-		log.Println("Init config failed, exit")
+		log.Printf("Init config failed: %s, exit", err.Error())
 		return
 	}
 	a.cm.SetReloadCallback(a.ReloadConfig)
