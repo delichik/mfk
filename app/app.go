@@ -8,9 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"go.uber.org/zap"
+
 	"github.com/delichik/mfk/config"
 	"github.com/delichik/mfk/logger"
-	"go.uber.org/zap"
 )
 
 type App struct {
@@ -62,13 +63,26 @@ func (a *App) AfterRun(call func()) {
 }
 
 func (a *App) Run() {
+	for _, module := range a.orderedModules {
+		if module.AdditionalLogger() {
+			c := logger.GetDefaultConfig()
+			c.LogPath = "logs/" + module.Name() + ".log"
+			config.RegisterModuleConfig(module.Name()+"-logger", c)
+		}
+	}
+
 	err := a.cm.Init()
 	if err != nil {
 		log.Printf("Init config failed: %s, exit", err.Error())
 		return
 	}
 	a.cm.SetReloadCallback(a.ReloadConfig)
-	logger.Init(a.cm)
+	logger.InitDefault(a.cm)
+	for _, module := range a.orderedModules {
+		if module.AdditionalLogger() {
+			logger.Init(module.Name()+"-logger", a.cm)
+		}
+	}
 	logger.Info("App init")
 
 	logger.Info("Loading app modules")

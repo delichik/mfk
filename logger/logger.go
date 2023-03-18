@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/delichik/mfk/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/delichik/mfk/config"
 )
 
 const (
-	ModuleLogger = "logger"
+	ModuleName = "logger"
 )
 
-var defaultLoggerConfig = &LoggerConfig{
+var defaultLoggerConfig = &Config{
 	Level:     "info",
 	Format:    "text",
 	LogPath:   "module.log",
@@ -27,10 +28,10 @@ var defaultLoggerConfig = &LoggerConfig{
 }
 
 func init() {
-	config.RegisterModuleConfig(ModuleLogger, defaultLoggerConfig)
+	config.RegisterModuleConfig(ModuleName, defaultLoggerConfig)
 }
 
-type LoggerConfig struct {
+type Config struct {
 	Level     string `yaml:"level" comment:"Min log output level"`
 	Format    string `yaml:"format" comment:"Log output format: json|text"`
 	LogPath   string `yaml:"log_path" comment:"Path to write log, use \"stdout\" to write to console"`
@@ -42,7 +43,7 @@ type LoggerConfig struct {
 	logLevel zapcore.Level `yaml:"-"`
 }
 
-func (c *LoggerConfig) Check() error {
+func (c *Config) Check() error {
 	if c.Level != "" {
 		err := c.logLevel.UnmarshalText([]byte(c.Level))
 		if err != nil {
@@ -74,25 +75,35 @@ func (c *LoggerConfig) Check() error {
 	return nil
 }
 
-func (c *LoggerConfig) Clone() config.ModuleConfig {
+func (c *Config) Clone() config.ModuleConfig {
 	newObj := *c
 	newObj.logLevel = c.logLevel
 	return &newObj
 }
 
-func (c *LoggerConfig) Compare(config.ModuleConfig) bool {
+func (c *Config) Compare(config.ModuleConfig) bool {
 	return true
 }
 
 var defaultLogger *zap.Logger
 
-func Init(c config.ConfigSet) {
-	var loggerConfig *LoggerConfig
-	t := c.GetModuleConfig(ModuleLogger)
-	if t == nil || t.(*LoggerConfig) == nil {
+var loggers map[string]*zap.Logger
+
+func InitDefault(c config.ConfigSet) {
+	defaultLogger = Init(ModuleName, c)
+}
+
+func GetDefaultConfig() *Config {
+	return defaultLoggerConfig.Clone().(*Config)
+}
+
+func Init(name string, c config.ConfigSet) *zap.Logger {
+	var loggerConfig *Config
+	t := c.GetModuleConfig(name)
+	if t == nil || t.(*Config) == nil {
 		loggerConfig = defaultLoggerConfig
 	} else {
-		loggerConfig = t.(*LoggerConfig)
+		loggerConfig = t.(*Config)
 	}
 	var writeSyncer zapcore.WriteSyncer
 	if loggerConfig.LogPath == "stdout" {
@@ -112,5 +123,7 @@ func Init(c config.ConfigSet) {
 	} else if loggerConfig.Format == "text" {
 		core = zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), writeSyncer, loggerConfig.logLevel)
 	}
-	defaultLogger = zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
+	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
+	loggers[name] = l
+	return l
 }
