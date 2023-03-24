@@ -10,11 +10,14 @@ type Module interface {
 	// Name 返回模块的名字，所有模块名字不能重复
 	Name() string
 
-	// Run 启动模块，当应用启动时会被调用
-	Run(ctx context.Context) error
+	// ConfigRequired 返回是否需要配置
+	ConfigRequired() bool
 
 	// ApplyConfig 触发配置应用，当启动和配置发生变化时会被调用
 	ApplyConfig(cfg config.ModuleConfig) error
+
+	// Run 启动模块，当应用启动时会被调用
+	Run(ctx context.Context) error
 
 	// AdditionalLogger 返回是否需要额外的日志记录
 	AdditionalLogger() bool

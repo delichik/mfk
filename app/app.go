@@ -65,6 +65,9 @@ func AfterRun(call func()) {
 
 func Run() {
 	for _, module := range orderedModules {
+		if !module.ConfigRequired() {
+			continue
+		}
 		if module.AdditionalLogger() {
 			c := logger.GetDefaultConfig()
 			c.LogPath = "logs/" + module.Name() + ".log"
@@ -88,21 +91,22 @@ func Run() {
 
 	logger.Info("Loading app modules")
 	for i, module := range orderedModules {
-		cfg := cm.GetModuleConfig(module.Name())
-		if cfg == nil {
-			logger.Debug("Skip module", zap.String("name", module.Name()))
-			continue
-		}
-		if i < autoLoadModuleCount {
-			logger.Debug("Applying auto load module config", zap.String("name", module.Name()))
-		} else {
+		logger.Debug("Prepare module",
+			zap.String("name", module.Name()),
+			zap.Bool("auto_loaded", i < autoLoadModuleCount))
+		if module.ConfigRequired() {
+			cfg := cm.GetModuleConfig(module.Name())
+			if cfg == nil {
+				logger.Debug("Skip module", zap.String("name", module.Name()))
+				continue
+			}
 			logger.Debug("Applying module config", zap.String("name", module.Name()))
-		}
-		err := module.ApplyConfig(cfg)
-		if err != nil {
-			logger.Fatal("Apply module config failed, exit",
-				zap.String("name", module.Name()),
-				zap.Error(err))
+			err := module.ApplyConfig(cfg)
+			if err != nil {
+				logger.Fatal("Apply module config failed, exit",
+					zap.String("name", module.Name()),
+					zap.Error(err))
+			}
 		}
 		err = module.Run(ctx)
 		if err != nil {
@@ -123,9 +127,11 @@ func Run() {
 	logger.Info("App shutdown")
 
 	for _, module := range orderedModules {
-		cfg := cm.GetModuleConfig(module.Name())
-		if cfg == nil {
-			continue
+		if module.ConfigRequired() {
+			cfg := cm.GetModuleConfig(module.Name())
+			if cfg == nil {
+				continue
+			}
 		}
 		module.Exit()
 	}
