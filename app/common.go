@@ -1,14 +1,16 @@
 package app
 
+import "github.com/delichik/mfk/config"
+
 type AdditionalLoggerModule struct{}
 
-func (a *AdditionalLoggerModule) AdditionalLogger() bool {
+func (m *AdditionalLoggerModule) AdditionalLogger() bool {
 	return true
 }
 
 type DefaultLoggerModule struct{}
 
-func (a *DefaultLoggerModule) AdditionalLogger() bool {
+func (m *DefaultLoggerModule) AdditionalLogger() bool {
 	return false
 }
 
@@ -18,8 +20,12 @@ func (m *NoConfigModule) ConfigRequired() bool {
 	return false
 }
 
-func (a *NoConfigModule) AdditionalLogger() bool {
+func (m *NoConfigModule) AdditionalLogger() bool {
 	return false
+}
+
+func (m *NoConfigModule) ApplyConfig(_ config.ModuleConfig) error {
+	return nil
 }
 
 type ConfigRequiredModule struct{}
