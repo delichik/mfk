@@ -1,6 +1,11 @@
 package app
 
-import "github.com/delichik/mfk/config"
+import (
+	"strconv"
+	"sync/atomic"
+
+	"github.com/delichik/mfk/config"
+)
 
 type AdditionalLoggerModule struct{}
 
@@ -33,3 +38,18 @@ type ConfigRequiredModule struct{}
 func (m *ConfigRequiredModule) ConfigRequired() bool {
 	return true
 }
+
+var initializer uint32 = 0
+
+type InitializerModule struct {
+	id string
+}
+
+func (m *InitializerModule) Name() string {
+	if m.id == "" {
+		m.id = strconv.Itoa(int(atomic.AddUint32(&initializer, 1)))
+	}
+	return "initializer_" + m.id
+}
+
+func (m *InitializerModule) Exit() {}
