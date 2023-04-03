@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strconv"
 	"sync/atomic"
 
@@ -50,6 +51,10 @@ func (m *InitializerModule) Name() string {
 		m.id = strconv.Itoa(int(atomic.AddUint32(&initializer, 1)))
 	}
 	return "initializer_" + m.id
+}
+
+func (m *InitializerModule) Run(_ context.Context) error {
+	return nil
 }
 
 func (m *InitializerModule) Exit() {}
