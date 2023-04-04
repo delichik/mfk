@@ -18,6 +18,7 @@ var (
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	cm                  *config.Manager
+	beforeRunCall       func()
 	afterRunCall        func()
 	modules             map[string]Module
 	orderedModules      []Module
@@ -27,8 +28,6 @@ var (
 func init() {
 	ctx, cancel = context.WithCancel(context.Background())
 	modules = map[string]Module{}
-	clvs := parseFlags()
-	cm = config.NewManager(ctx, clvs.ConfigPath)
 }
 
 type CommandLineVars struct {
@@ -59,11 +58,17 @@ func RegisterModule(module Module) {
 	orderedModules = append(orderedModules, module)
 }
 
+func BeforeRun(call func()) {
+	beforeRunCall = call
+}
+
 func AfterRun(call func()) {
 	afterRunCall = call
 }
 
 func Run() {
+	clvs := parseFlags()
+	cm = config.NewManager(ctx, clvs.ConfigPath)
 	for _, module := range orderedModules {
 		if !module.ConfigRequired() {
 			continue
@@ -89,6 +94,9 @@ func Run() {
 	}
 	logger.Info("App init")
 
+	if beforeRunCall != nil {
+		beforeRunCall()
+	}
 	logger.Info("Loading app modules")
 	for i, module := range orderedModules {
 		logger.Debug("Prepare module",
@@ -126,6 +134,7 @@ func Run() {
 	signal.Stop(signalChan)
 	logger.Info("App shutdown")
 
+	cancel()
 	for _, module := range orderedModules {
 		if module.ConfigRequired() {
 			cfg := cm.GetModuleConfig(module.Name())
@@ -135,7 +144,6 @@ func Run() {
 		}
 		module.Exit()
 	}
-	cancel()
 }
 
 func ReloadConfig(name string, cfg config.ModuleConfig) {
