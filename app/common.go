@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"strconv"
-	"sync/atomic"
 
 	"github.com/delichik/mfk/config"
 )
@@ -40,18 +38,7 @@ func (m *ConfigRequiredModule) ConfigRequired() bool {
 	return true
 }
 
-var initializer uint32 = 0
-
-type InitializerModule struct {
-	id string
-}
-
-func (m *InitializerModule) Name() string {
-	if m.id == "" {
-		m.id = strconv.Itoa(int(atomic.AddUint32(&initializer, 1)))
-	}
-	return "initializer_" + m.id
-}
+type InitializerModule struct{}
 
 func (m *InitializerModule) Run(_ context.Context) error {
 	return nil
