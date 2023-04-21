@@ -93,8 +93,6 @@ func Run(version string) {
 		}
 	}
 
-	logger.Info("Starting up", zap.String("version", version))
-
 	err := cm.Init()
 	if err != nil {
 		log.Printf("Init config failed: %s, exit", err.Error())
@@ -107,7 +105,7 @@ func Run(version string) {
 			logger.Init(module.Name()+"-logger", cm)
 		}
 	}
-	logger.Info("App init")
+	logger.Info("App init", zap.String("version", version))
 
 	if beforeRunCall != nil {
 		beforeRunCall()
