@@ -102,6 +102,7 @@ func save(path string, config *Config) error {
 	if err != nil {
 		return err
 	}
+	_ = os.Rename(path, path+".bak")
 	err = os.WriteFile(path, b, 0655)
 	if err != nil {
 		return err

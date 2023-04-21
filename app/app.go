@@ -2,10 +2,13 @@ package app
 
 import (
 	"context"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"go.uber.org/zap"
@@ -33,27 +36,37 @@ func init() {
 type CommandLineVars struct {
 	ConfigPath string
 	Help       bool
+	Version    bool
 }
 
-func parseFlags() CommandLineVars {
+func parseFlags(version string) CommandLineVars {
 	clvs := CommandLineVars{}
 	flag.StringVar(&clvs.ConfigPath, "c", "config.yaml", "Config path")
 	flag.BoolVar(&clvs.Help, "h", false, "Print help")
+	flag.BoolVar(&clvs.Version, "v", false, "Print version")
 	flag.Parse()
 	if clvs.Help {
 		flag.Usage()
+		os.Exit(1)
+	}
+	if clvs.Version {
+		fmt.Println("Go version:\t\t", runtime.Version())
+		fmt.Println("Binary version:\t", version)
 		os.Exit(1)
 	}
 	return clvs
 }
 
 func RegisterAutoLoadModule(module Module) {
-	modules[module.Name()] = module
-	orderedModules = append(orderedModules, module)
+	RegisterModule(module)
 	autoLoadModuleCount++
 }
 
 func RegisterModule(module Module) {
+	_, ok := modules[module.Name()]
+	if ok {
+		panic(errors.New("module " + module.Name() + " already registered"))
+	}
 	modules[module.Name()] = module
 	orderedModules = append(orderedModules, module)
 }
@@ -66,8 +79,8 @@ func AfterRun(call func()) {
 	afterRunCall = call
 }
 
-func Run() {
-	clvs := parseFlags()
+func Run(version string) {
+	clvs := parseFlags(version)
 	cm = config.NewManager(ctx, clvs.ConfigPath)
 	for _, module := range orderedModules {
 		if !module.ConfigRequired() {
@@ -79,6 +92,8 @@ func Run() {
 			config.RegisterModuleConfig(module.Name()+"-logger", c)
 		}
 	}
+
+	logger.Info("Starting up", zap.String("version", version))
 
 	err := cm.Init()
 	if err != nil {
@@ -105,7 +120,7 @@ func Run() {
 		if module.ConfigRequired() {
 			cfg := cm.GetModuleConfig(module.Name())
 			if cfg == nil {
-				logger.Debug("Skip module", zap.String("name", module.Name()))
+				logger.Warn("Skip module", zap.String("name", module.Name()))
 				continue
 			}
 			logger.Debug("Applying module config", zap.String("name", module.Name()))
