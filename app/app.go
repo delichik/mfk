@@ -83,6 +83,7 @@ func Run(version string) {
 	clvs := parseFlags(version)
 	cm = config.NewManager(ctx, clvs.ConfigPath)
 	for _, module := range orderedModules {
+		module.SetConfigManager(cm)
 		if !module.ConfigRequired() {
 			continue
 		}
@@ -157,6 +158,10 @@ func Run(version string) {
 		}
 		module.Exit()
 	}
+}
+
+func GetModuleConfig(name string) {
+
 }
 
 func ReloadConfig(name string, cfg config.ModuleConfig) {

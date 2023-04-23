@@ -24,4 +24,6 @@ type Module interface {
 
 	// Exit 触发模块退出，当应用退出时会被调用
 	Exit()
+
+	SetConfigManager(cm *config.Manager)
 }

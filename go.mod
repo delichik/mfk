@@ -3,6 +3,7 @@ module github.com/delichik/mfk
 go 1.18
 
 require (
+	github.com/ghodss/yaml v1.0.0
 	github.com/gin-gonic/gin v1.9.0
 	go.uber.org/zap v1.24.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -34,4 +35,5 @@ require (
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
