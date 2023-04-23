@@ -160,10 +160,6 @@ func Run(version string) {
 	}
 }
 
-func GetModuleConfig(name string) {
-
-}
-
 func ReloadConfig(name string, cfg config.ModuleConfig) {
 	module, ok := modules[name]
 	if !ok {

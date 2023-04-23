@@ -57,3 +57,7 @@ type ConfigManagerModule struct {
 func (m *ConfigManagerModule) SetConfigManager(cm *config.Manager) {
 	m.cm = cm
 }
+
+func (m *ConfigManagerModule) GetConfigManager() *config.Manager {
+	return m.cm
+}
