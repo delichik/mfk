@@ -12,15 +12,11 @@ func (m *AdditionalLoggerModule) AdditionalLogger() bool {
 	return true
 }
 
-func (m *AdditionalLoggerModule) SetConfigManager(_ *config.Manager) {}
-
 type DefaultLoggerModule struct{}
 
 func (m *DefaultLoggerModule) AdditionalLogger() bool {
 	return false
 }
-
-func (m *DefaultLoggerModule) SetConfigManager(_ *config.Manager) {}
 
 type NoConfigModule struct{}
 
@@ -36,11 +32,15 @@ func (m *NoConfigModule) ApplyConfig(_ config.ModuleConfig) error {
 	return nil
 }
 
+func (m *NoConfigModule) SetConfigManager(_ *config.Manager) {}
+
 type ConfigRequiredModule struct{}
 
 func (m *ConfigRequiredModule) ConfigRequired() bool {
 	return true
 }
+
+func (m *ConfigRequiredModule) SetConfigManager(_ *config.Manager) {}
 
 type InitializerModule struct{}
 
@@ -49,15 +49,3 @@ func (m *InitializerModule) Run(_ context.Context) error {
 }
 
 func (m *InitializerModule) Exit() {}
-
-type ConfigManagerModule struct {
-	cm *config.Manager
-}
-
-func (m *ConfigManagerModule) SetConfigManager(cm *config.Manager) {
-	m.cm = cm
-}
-
-func (m *ConfigManagerModule) GetConfigManager() *config.Manager {
-	return m.cm
-}

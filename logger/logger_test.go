@@ -13,10 +13,6 @@ func TestConfig_NewLogger(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
-	Init(cfg)
-	l := NewLogger("log_test")
-	if l == nil {
-		t.FailNow()
-	}
-	l.Info("logger testing")
+	InitDefault(cfg)
+	Info("logger testing")
 }
