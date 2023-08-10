@@ -40,7 +40,8 @@ type Config struct {
 	MaxAge    int    `yaml:"max_age" comment:"Maximum saving days of a log backup"`
 	Compress  bool   `yaml:"compress" comment:"Compress the backups"`
 
-	logLevel zapcore.Level `yaml:"-"`
+	LogDriver zapcore.WriteSyncer `yaml:"-"`
+	logLevel  zapcore.Level       `yaml:"-"`
 }
 
 func (c *Config) Check() error {
@@ -55,11 +56,11 @@ func (c *Config) Check() error {
 		return errors.New(`format: must be "json" or "text"`)
 	}
 
-	if len(c.LogPath) == 0 {
+	if len(c.LogPath) == 0 && c.LogDriver == nil {
 		return errors.New(`log_path: required`)
 	}
 
-	if c.LogPath != "stdout" {
+	if c.LogPath != "stdout" && c.LogDriver == nil {
 		if c.MaxSize <= 0 {
 			return errors.New(`max_size: must grater than 0`)
 		}
@@ -89,15 +90,52 @@ var defaultLogger *zap.Logger
 
 var loggers = make(map[string]*zap.Logger)
 
-func InitDefault(c config.ConfigSet) {
+func InitDefault(c *Config) {
 	defaultLogger = Init(ModuleName, c)
+}
+
+func Init(name string, c *Config) *zap.Logger {
+	var writeSyncer zapcore.WriteSyncer
+	if c.LogDriver != nil {
+		writeSyncer = c.LogDriver
+	} else if c.LogPath == "stdout" {
+		writeSyncer = os.Stdout
+	} else {
+		writeSyncer = zapcore.AddSync(&lumberjack.Logger{
+			Filename:   c.LogPath,
+			MaxSize:    c.MaxSize,
+			MaxBackups: c.MaxBackup,
+			MaxAge:     c.MaxAge,
+			Compress:   c.Compress,
+		})
+	}
+	var core zapcore.Core
+	if c.Format == "json" {
+		core = zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), writeSyncer, c.logLevel)
+	} else if c.Format == "text" {
+		core = zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), writeSyncer, c.logLevel)
+	}
+	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
+	loggers[name] = l
+	return l
+}
+
+func InitDefaultByConfigSet(c config.ConfigSet) {
+	var loggerConfig *Config
+	t := c.GetModuleConfig(ModuleName)
+	if t == nil || t.(*Config) == nil {
+		loggerConfig = defaultLoggerConfig
+	} else {
+		loggerConfig = t.(*Config)
+	}
+	defaultLogger = Init(ModuleName, loggerConfig)
 }
 
 func GetDefaultConfig() *Config {
 	return defaultLoggerConfig.Clone().(*Config)
 }
 
-func Init(name string, c config.ConfigSet) *zap.Logger {
+func InitByConfigSet(name string, c config.ConfigSet) *zap.Logger {
 	var loggerConfig *Config
 	t := c.GetModuleConfig(name)
 	if t == nil || t.(*Config) == nil {
@@ -105,25 +143,6 @@ func Init(name string, c config.ConfigSet) *zap.Logger {
 	} else {
 		loggerConfig = t.(*Config)
 	}
-	var writeSyncer zapcore.WriteSyncer
-	if loggerConfig.LogPath == "stdout" {
-		writeSyncer = os.Stdout
-	} else {
-		writeSyncer = zapcore.AddSync(&lumberjack.Logger{
-			Filename:   loggerConfig.LogPath,
-			MaxSize:    loggerConfig.MaxSize,
-			MaxBackups: loggerConfig.MaxBackup,
-			MaxAge:     loggerConfig.MaxAge,
-			Compress:   loggerConfig.Compress,
-		})
-	}
-	var core zapcore.Core
-	if loggerConfig.Format == "json" {
-		core = zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), writeSyncer, loggerConfig.logLevel)
-	} else if loggerConfig.Format == "text" {
-		core = zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), writeSyncer, loggerConfig.logLevel)
-	}
-	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
-	loggers[name] = l
-	return l
+
+	return Init(name, loggerConfig)
 }

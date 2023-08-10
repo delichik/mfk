@@ -100,10 +100,10 @@ func Run(version string) {
 		return
 	}
 	cm.SetReloadCallback(ReloadConfig)
-	logger.InitDefault(cm)
+	logger.InitDefaultByConfigSet(cm)
 	for _, module := range orderedModules {
 		if module.AdditionalLogger() {
-			logger.Init(module.Name()+"-logger", cm)
+			logger.InitByConfigSet(module.Name()+"-logger", cm)
 		}
 	}
 	logger.Info("App init", zap.String("version", version))
