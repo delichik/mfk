@@ -59,30 +59,30 @@ func RunPlugin(options *Options) {
 		fmt.Printf("Plugin %s is started\n", name)
 	}
 
-	for name := range registeredPlugins {
-		send(os.Stdout, _CALL_REGISTER_METHOD, []byte(name))
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		buf := bufio.NewReader(os.Stdin)
 		for {
-			call, data, err := read(buf)
+			req, err := read(buf)
 			if err != nil {
 				return
 			}
 			if ctx.Err() != nil {
 				return
 			}
-			plugin, ok := registeredPlugins[call]
+			plugin, ok := registeredPlugins[req.call]
 			if !ok {
-				send(os.Stdout, call+"_rsp", []byte(""))
+				send(os.Stdout, &sendObject2{
+					id:      req.id,
+					call:    req.call + "_rsp",
+					content: []byte(""),
+				})
 				continue
 			}
-			rsp, err := plugin.Handle(data)
+			rsp, err := plugin.Handle(req.content)
 			if err != nil {
-				logger.Error("plugin handle failed", zap.String("call", call), zap.Error(err))
-				send(os.Stdout, call+"_rsp", []byte(err.Error()))
+				logger.Error("plugin handle failed", zap.String("call", req.call), zap.Error(err))
+				send(os.Stdout, req.call+"_rsp", []byte(err.Error()))
 				continue
 			}
 			send(os.Stdout, call+"_rsp", rsp)

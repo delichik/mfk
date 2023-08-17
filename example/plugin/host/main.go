@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/delichik/mfk/logger"
 	"github.com/delichik/mfk/plugin"
@@ -16,7 +19,7 @@ func main() {
 		Format:  "json",
 		LogPath: "stdout",
 	})
-	h := plugin.NewHost("example-plugin-host", "0.0.1")
+	h := plugin.NewHost("example-plugin-host", "0.0.1", &executor{})
 	err := h.Load("./example/plugin")
 	if err != nil {
 		panic(err)
@@ -30,4 +33,15 @@ func main() {
 	signal.Notify(signalChan, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-signalChan
 	signal.Stop(signalChan)
+}
+
+type executor struct{}
+
+func (e *executor) OnCall(call string, data []byte) ([]byte, error) {
+	switch call {
+	case "hello":
+		logger.Info("hello from plugin", zap.ByteString("content", data))
+		return []byte("hello from example-plugin-host"), nil
+	}
+	return nil, errors.New("unknown call")
 }

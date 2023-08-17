@@ -2,26 +2,44 @@ package plugin
 
 import (
 	"bufio"
-	"encoding/json"
+	"context"
 	"io"
 	"os/exec"
-
-	"go.uber.org/zap"
-
-	"github.com/delichik/mfk/logger"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
+type callRequest struct {
+	channel chan *callResponse
+	addTime int64
+}
+type callResponse struct {
+	err     error
+	content []byte
+}
+
 type Entity struct {
-	cmd *exec.Cmd
+	cmd  *exec.Cmd
+	host *Host
+
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	pluginOutput   io.ReadCloser
 	pluginInput    io.WriteCloser
 	stdoutBuffered *bufio.Reader
+
+	calls       map[uint64]*callRequest
+	callLocker  sync.RWMutex
+	callIDIndex atomic.Uint64
 }
 
-func newEntity(cmd *exec.Cmd) *Entity {
+func newEntity(cmd *exec.Cmd, host *Host) *Entity {
 	e := &Entity{
-		cmd: cmd,
+		cmd:  cmd,
+		host: host,
 	}
 	return e
 }
@@ -45,17 +63,51 @@ func (e *Entity) Start() error {
 
 	go func() {
 		for {
-			call, data, err := read(e.stdoutBuffered)
-			if err != nil {
+			rsp, err := read(e.stdoutBuffered)
+			if err != nil || e.ctx.Err() != nil {
 				return
 			}
-			switch call {
-			case _CALL_LOGGER:
-				log(e.cmd.Path, data)
-			// case _CALL_REGISTER_METHOD:
-			// 	registerMethod(e.cmd.Path, data)
-			default:
-				logger.Info("plugin order", zap.String("call", call), zap.ByteString("data", data))
+
+			if strings.HasSuffix(rsp.call, _CALL_REPLY) {
+				e.callLocker.Lock()
+				req, ok := e.calls[rsp.id]
+				if ok {
+					delete(e.calls, rsp.id)
+					select {
+					case req.channel <- &callResponse{
+						err:     rsp.err,
+						content: rsp.content,
+					}:
+					case <-e.ctx.Done():
+						return
+					default:
+					}
+					close(req.channel)
+				}
+				e.callLocker.Unlock()
+				continue
+			}
+			e.host.dispatchCall(e, rsp.call, rsp.content, e.newReplyFunc(rsp.id, rsp.call))
+		}
+	}()
+
+	go func() {
+		timer := time.NewTimer(500 * time.Millisecond)
+		defer timer.Stop()
+		for {
+			select {
+			case <-timer.C:
+				e.callLocker.Lock()
+				for id, req := range e.calls {
+					if time.Now().Unix()-req.addTime > 5 {
+						close(req.channel)
+						delete(e.calls, id)
+					}
+				}
+				e.callLocker.Unlock()
+				timer.Reset(500 * time.Millisecond)
+			case <-e.ctx.Done():
+				return
 			}
 		}
 	}()
@@ -63,63 +115,54 @@ func (e *Entity) Start() error {
 	return nil
 }
 
+func (e *Entity) newReplyFunc(id uint64, cmd string) func(data []byte) {
+	return func(data []byte) {
+		send(e.pluginInput, &sendObject2{
+			id:      id,
+			call:    cmd + _CALL_REPLY,
+			content: data,
+		})
+	}
+}
+
 func (e *Entity) Stop() error {
+	e.cancel()
 	return e.cmd.Process.Kill()
 }
 
 func (e *Entity) Call(call string, data []byte) error {
-	err := send(e.pluginInput, call, data)
-	if err != nil {
-		return err
+	req := &sendObject2{
+		id:      e.callIDIndex.Add(1),
+		call:    call,
+		content: data,
 	}
-	return nil
+	return send(e.pluginInput, req)
 }
 
 func (e *Entity) CallWithResponse(call string, data []byte) ([]byte, error) {
-	err := send(e.pluginInput, call, data)
+	req := &sendObject2{
+		id:      e.callIDIndex.Add(1),
+		call:    call,
+		content: data,
+	}
+	channel := make(chan *callResponse, 1)
+	e.callLocker.Lock()
+	e.calls[req.id] = &callRequest{
+		channel: channel,
+		addTime: time.Now().Unix(),
+	}
+	e.callLocker.Unlock()
+	err := send(e.pluginInput, req)
 	if err != nil {
 		return nil, err
 	}
-	return []byte(""), nil
-}
-
-type logContent struct {
-	Level   string `json:"level"`
-	Caller  string `json:"caller"`
-	Message string `json:"msg"`
-}
-
-func log(pluginName string, data []byte) {
-	c := logContent{}
-	err := json.Unmarshal(data, &c)
-	if err != nil {
-		return
+	rsp := <-channel
+	e.callLocker.Lock()
+	o, ok := e.calls[req.id]
+	if ok {
+		close(o.channel)
+		delete(e.calls, req.id)
 	}
-
-	fieldMap := map[string]interface{}{}
-	_ = json.Unmarshal(data, &fieldMap)
-	fields := []zap.Field{}
-	fields = append(fields, zap.String("plugin_name", pluginName), zap.String("plugin_caller", c.Caller))
-	for k, v := range fieldMap {
-		if k == "level" ||
-			k == "ts" ||
-			k == "caller" ||
-			k == "msg" ||
-			k == "plugin_name" ||
-			k == "plugin_caller" {
-			continue
-		}
-		fields = append(fields, zap.Any(k, v))
-	}
-	c.Message = "[plugin] " + c.Message
-	switch c.Level {
-	case "debug":
-		logger.Debug(c.Message, fields...)
-	case "info":
-		logger.Info(c.Message, fields...)
-	case "warn":
-		logger.Warn(c.Message, fields...)
-	case "error":
-		logger.Error(c.Message, fields...)
-	}
+	e.callLocker.Unlock()
+	return rsp.content, rsp.err
 }
