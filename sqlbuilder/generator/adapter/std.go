@@ -1,0 +1,4 @@
+package adapter
+
+func init() {
+}
