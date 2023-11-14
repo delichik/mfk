@@ -1,10 +1,10 @@
-package yaml
+package utils
 
 import (
 	"testing"
 )
 
-func TestMarshallWithComments(t *testing.T) {
+func TestYaml_MarshallWithComments(t *testing.T) {
 	type C struct {
 		D []string `yaml:"d" comment:"ddd"`
 		H string   `yaml:"h" comment:"hhh"`
@@ -30,7 +30,7 @@ func TestMarshallWithComments(t *testing.T) {
 		},
 	}
 
-	r, err := MarshallWithComments(u)
+	r, err := YamlMarshallWithComments(u)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()

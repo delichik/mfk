@@ -1,4 +1,4 @@
-package yaml
+package utils
 
 import (
 	"errors"
@@ -7,9 +7,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// MarshallWithComments 编码 yaml 并读取 comment 标签作为注释写入到编码后的 yaml 字符串中
+// YamlMarshallWithComments 编码 yaml 并读取 comment 标签作为注释写入到编码后的 yaml 字符串中
 // 速度很慢，适合少量使用的情况
-func MarshallWithComments(obj interface{}) ([]byte, error) {
+func YamlMarshallWithComments(obj interface{}) ([]byte, error) {
 	n := &yaml.Node{}
 	v := reflect.ValueOf(obj)
 	if !v.IsValid() {
@@ -19,22 +19,22 @@ func MarshallWithComments(obj interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	addComments(n, v)
+	yamlAddComments(n, v)
 	return yaml.Marshal(n)
 }
 
-// AddComments 读取 comment 标签作为注释写入到 yaml.Node 中
+// YamlAddComments 读取 comment 标签作为注释写入到 yaml.Node 中
 // 速度很慢，适合少量使用的情况
-func AddComments(node *yaml.Node, obj interface{}) error {
+func YamlAddComments(node *yaml.Node, obj interface{}) error {
 	v := reflect.ValueOf(obj)
 	if !v.IsValid() {
 		return errors.New("invalid object")
 	}
-	addComments(node, v)
+	yamlAddComments(node, v)
 	return nil
 }
 
-func addComments(node *yaml.Node, v reflect.Value) {
+func yamlAddComments(node *yaml.Node, v reflect.Value) {
 	for v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer {
 		if v.IsNil() || !v.IsValid() {
 			return
@@ -48,7 +48,7 @@ func addComments(node *yaml.Node, v reflect.Value) {
 		fallthrough
 	case reflect.Slice:
 		for i, n := range node.Content {
-			addComments(n, v.Index(i))
+			yamlAddComments(n, v.Index(i))
 		}
 	case reflect.Map:
 		keys := v.MapKeys()
@@ -57,7 +57,7 @@ func addComments(node *yaml.Node, v reflect.Value) {
 			for j, n := range node.Content {
 				if j&1 == 0 {
 					if n.Value == k.String() {
-						addComments(node.Content[j+1], f)
+						yamlAddComments(node.Content[j+1], f)
 						break
 					}
 				}
@@ -69,7 +69,7 @@ func addComments(node *yaml.Node, v reflect.Value) {
 			for j, n := range node.Content {
 				if j&1 == 0 {
 					if f.Tag.Get("yaml") == n.Value {
-						addComments(node.Content[j+1], v.Field(i))
+						yamlAddComments(node.Content[j+1], v.Field(i))
 						n.HeadComment = v.Type().Field(i).Tag.Get("comment")
 					}
 				}

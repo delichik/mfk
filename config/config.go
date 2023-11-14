@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 
-	myyaml "github.com/delichik/mfk/yaml"
+	"github.com/delichik/mfk/utils"
 )
 
 type ConfigSet interface {
@@ -31,7 +31,7 @@ func (c *Config) GetModuleConfig(moduleName string) ModuleConfig {
 }
 
 func (c *Config) String() string {
-	b, err := myyaml.MarshallWithComments(c.moduleConfigs)
+	b, err := utils.YamlMarshallWithComments(c.moduleConfigs)
 	if err != nil {
 		panic(err)
 	}

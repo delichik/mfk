@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	myyaml "github.com/delichik/mfk/yaml"
 	ghodssyaml "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v3"
+
+	"github.com/delichik/mfk/utils"
 )
 
 func load(path string) (*Config, error) {
@@ -38,7 +39,7 @@ func load(path string) (*Config, error) {
 }
 
 func save(path string, config *Config) error {
-	b, err := myyaml.MarshallWithComments(config.moduleConfigs)
+	b, err := utils.YamlMarshallWithComments(config.moduleConfigs)
 	if err != nil {
 		return err
 	}
