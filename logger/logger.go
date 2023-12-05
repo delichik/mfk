@@ -28,7 +28,7 @@ var defaultLoggerConfig = &Config{
 }
 
 func init() {
-	config.RegisterModuleConfig(ModuleName, defaultLoggerConfig)
+	config.RegisterModuleConfig(defaultLoggerConfig)
 }
 
 type Config struct {
@@ -40,7 +40,12 @@ type Config struct {
 	MaxAge    int    `yaml:"max_age" comment:"Maximum saving days of a log backup"`
 	Compress  bool   `yaml:"compress" comment:"Compress the backups"`
 
-	logLevel zapcore.Level `yaml:"-"`
+	logLevel   zapcore.Level `yaml:"-"`
+	ModePrefix string        `yaml:"-"`
+}
+
+func (c *Config) Name() string {
+	return c.ModePrefix + ModuleName
 }
 
 func (c *Config) Check() error {

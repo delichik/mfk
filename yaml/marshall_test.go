@@ -11,12 +11,12 @@ func TestMarshallWithComments(t *testing.T) {
 	}
 
 	type T struct {
-		A string      `yaml:"a" comment:"aaa"`
-		B C           `yaml:"b" comment:"bbb"`
-		E interface{} `yaml:"e" comment:"eee"`
-		F interface{} `yaml:"f" comment:"fff"`
-		G []C         `yaml:"g" comment:"ggg"`
-		I C           `yaml:"i"`
+		A string `yaml:"a" comment:"aaa"`
+		B C      `yaml:"b" comment:"bbb"`
+		E any    `yaml:"e" comment:"eee"`
+		F any    `yaml:"f" comment:"fff"`
+		G []C    `yaml:"g" comment:"ggg"`
+		I C      `yaml:"i"`
 	}
 
 	u := &T{

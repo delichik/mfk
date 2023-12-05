@@ -1,35 +1,36 @@
 package queue
 
 import (
-	"container/list"
 	"sync"
 	"time"
+
+	"github.com/delichik/mfk/wrapper"
 )
 
-type Queue struct {
-	element   *list.List
+type Queue[T any] struct {
+	element   *wrapper.List[T]
 	cond      *sync.Cond
 	closed    bool
 	maxLength int
 }
 
-func New(maxLength int) *Queue {
-	return &Queue{
-		element:   list.New(),
+func New[T any](maxLength int) *Queue[T] {
+	return &Queue[T]{
+		element:   wrapper.New[T](),
 		cond:      sync.NewCond(&sync.Mutex{}),
 		closed:    false,
 		maxLength: maxLength,
 	}
 }
 
-func (q *Queue) Close() {
+func (q *Queue[T]) Close() {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 	q.closed = true
 	q.cond.Broadcast()
 }
 
-func (q *Queue) TryEnqueue(data interface{}) error {
+func (q *Queue[T]) TryEnqueue(data T) error {
 	q.cond.L.Lock()
 	defer func() {
 		q.cond.L.Unlock()
@@ -49,7 +50,7 @@ func (q *Queue) TryEnqueue(data interface{}) error {
 	return nil
 }
 
-func (q *Queue) Enqueue(data interface{}) error {
+func (q *Queue[T]) Enqueue(data T) error {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
@@ -67,7 +68,7 @@ func (q *Queue) Enqueue(data interface{}) error {
 	return nil
 }
 
-func (q *Queue) InsertFront(data interface{}) error {
+func (q *Queue[T]) InsertFront(data T) error {
 	if data == nil {
 		return nil
 	}
@@ -84,7 +85,7 @@ func (q *Queue) InsertFront(data interface{}) error {
 	return nil
 }
 
-func (q *Queue) Dequeue() (interface{}, error) {
+func (q *Queue[T]) Dequeue() (T, error) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
@@ -94,7 +95,7 @@ func (q *Queue) Dequeue() (interface{}, error) {
 	}
 
 	if q.closed {
-		return nil, ErrClosed
+		return *(new(T)), ErrClosed
 	}
 
 	e := q.element.Front()
@@ -102,7 +103,7 @@ func (q *Queue) Dequeue() (interface{}, error) {
 	return e.Value, nil
 }
 
-func (q *Queue) WaitEmpty() {
+func (q *Queue[T]) WaitEmpty() {
 	for {
 		q.cond.L.Lock()
 		if q.element.Len() == 0 || q.closed {

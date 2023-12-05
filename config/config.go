@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 
 	myyaml "github.com/delichik/mfk/yaml"
 )
@@ -12,6 +12,8 @@ type ConfigSet interface {
 }
 
 type ModuleConfig interface {
+	// Name 模块配置名称
+	Name() string
 	// Check 预检查错误
 	Check() error
 	// Clone 深度拷贝内容并返回
@@ -38,13 +40,13 @@ func (c *Config) String() string {
 	return string(b)
 }
 
-func RegisterModuleConfig(moduleName string, defaultConfig ModuleConfig) {
-	_, ok := moduleDefaultConfigs[moduleName]
+func RegisterModuleConfig(defaultConfig ModuleConfig) {
+	_, ok := moduleDefaultConfigs[defaultConfig.Name()]
 	if ok {
-		panic(errors.New("module name existed"))
+		panic(fmt.Errorf("module name %s existed", defaultConfig.Name()))
 	}
 
-	moduleDefaultConfigs[moduleName] = defaultConfig
+	moduleDefaultConfigs[defaultConfig.Name()] = defaultConfig
 }
 
 func Load(path string) (*Config, error) {
