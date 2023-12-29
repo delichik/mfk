@@ -62,6 +62,13 @@ func (h *Host) Load(pluginPath string) error {
 
 func (h *Host) Call(call string, data []byte) ([]byte, error) {
 	for _, plg := range h.plugins {
+		return plg.CallWithResponse(call, data)
+	}
+	return []byte(""), nil
+}
+
+func (h *Host) Notice(call string, data []byte) ([]byte, error) {
+	for _, plg := range h.plugins {
 		plg.Call(call, data)
 		return []byte(""), nil
 	}

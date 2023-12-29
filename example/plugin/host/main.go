@@ -27,7 +27,13 @@ func main() {
 
 	go func() {
 		time.Sleep(500 * time.Millisecond)
-		h.Call("hello", []byte("hello example-plugin-plugin"))
+		logger.Info("Sending hello")
+		rsp, err := h.Call("hello", []byte("hello example-plugin-plugin"))
+		if err != nil {
+			logger.Warn("err", zap.Error(err))
+		} else {
+			logger.Info("info", zap.ByteString("rsp", rsp))
+		}
 	}()
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGQUIT)

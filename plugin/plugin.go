@@ -74,7 +74,7 @@ func RunPlugin(options *Options) {
 			if !ok {
 				send(os.Stdout, &sendObject2{
 					id:      req.id,
-					call:    req.call + "_rsp",
+					call:    req.call + _CALL_REPLY,
 					content: []byte(""),
 				})
 				continue
@@ -82,10 +82,18 @@ func RunPlugin(options *Options) {
 			rsp, err := plugin.Handle(req.content)
 			if err != nil {
 				logger.Error("plugin handle failed", zap.String("call", req.call), zap.Error(err))
-				send(os.Stdout, req.call+"_rsp", []byte(err.Error()))
+				send(os.Stdout, &sendObject2{
+					id:      req.id,
+					call:    req.call + _CALL_REPLY,
+					content: []byte(err.Error()),
+				})
 				continue
 			}
-			send(os.Stdout, call+"_rsp", rsp)
+			send(os.Stdout, &sendObject2{
+				id:      req.id,
+				call:    req.call + _CALL_REPLY,
+				content: rsp,
+			})
 		}
 	}()
 

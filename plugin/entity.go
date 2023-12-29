@@ -37,9 +37,13 @@ type Entity struct {
 }
 
 func newEntity(cmd *exec.Cmd, host *Host) *Entity {
+	ctx, cancel := context.WithCancel(context.Background())
 	e := &Entity{
-		cmd:  cmd,
-		host: host,
+		cmd:    cmd,
+		host:   host,
+		ctx:    ctx,
+		cancel: cancel,
+		calls:  map[uint64]*callRequest{},
 	}
 	return e
 }
