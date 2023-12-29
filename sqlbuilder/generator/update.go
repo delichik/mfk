@@ -21,17 +21,10 @@ func generateUpdate(source *bytes.Buffer, target Target) {
 
 	for i := 0; i < modelType.NumField(); i++ {
 		field := modelType.Field(i)
-		tag := field.Tag.Get("json")
-		if tag == "-" {
-			continue
-		}
-
 		fieldName := field.Name
-		fieldJsonName := field.Name
-
-		if tag != "" {
-			parts := strings.Split(tag, ",")
-			fieldJsonName = parts[0]
+		fieldConfig := parseFieldConfig(field)
+		if fieldConfig.Skipped {
+			continue
 		}
 
 		fieldType := field.Type
@@ -46,7 +39,7 @@ func generateUpdate(source *bytes.Buffer, target Target) {
 
 		asString := adapter.AsString(fieldType)
 
-		source.WriteString(fmt.Sprintf("columnString += \"%s\"\n", fieldJsonName))
+		source.WriteString(fmt.Sprintf("columnString += \"%s\"\n", fieldConfig.ColumnName))
 		source.WriteString("columnString += \",\"\n")
 		source.WriteString(strings.ReplaceAll("columnValueString += "+asString+"\n", "${fieldName}", "m."+fieldName))
 		source.WriteString("columnValueString += \",\"\n")
@@ -75,35 +68,16 @@ func generateUpdateWhere(source *bytes.Buffer, target Target) {
 		modelType = modelType.Elem()
 	}
 	source.WriteString("\n")
-	source.WriteString(fmt.Sprintf("func (m *%s) UpdateWhere(db *sql.DB, cond string, params ...interface{}) error {\n", modelType.Name()))
+	source.WriteString(fmt.Sprintf("func (m *%s) UpdateWhere(db *sql.DB, cond string, params ...any) error {\n", modelType.Name()))
 	source.WriteString("columnString := \"\"\n")
 	source.WriteString("columnValueString := \"\"\n\n")
 
-mainLoop:
 	for i := 0; i < modelType.NumField(); i++ {
 		field := modelType.Field(i)
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "-" {
-			continue
-		}
-
 		fieldName := field.Name
-		fieldJsonName := field.Name
-
-		if jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			fieldJsonName = parts[0]
-		}
-
-		dymTag := field.Tag.Get("dym")
-		if dymTag != "-" {
-			parts := strings.Split(dymTag, ";")
-			for _, part := range parts {
-				switch part {
-				case "primaryKey":
-					continue mainLoop
-				}
-			}
+		fieldConfig := parseFieldConfig(field)
+		if fieldConfig.Skipped || fieldConfig.PrimaryKey {
+			continue
 		}
 
 		fieldType := field.Type
@@ -118,7 +92,7 @@ mainLoop:
 
 		asString := adapter.AsString(fieldType)
 
-		source.WriteString(fmt.Sprintf("columnString += \"%s\"\n", fieldJsonName))
+		source.WriteString(fmt.Sprintf("columnString += \"%s\"\n", fieldConfig.ColumnName))
 		source.WriteString("columnString += \",\"\n")
 		source.WriteString(strings.ReplaceAll("columnValueString += "+asString+"\n", "${fieldName}", "m."+fieldName))
 		source.WriteString("columnValueString += \",\"\n")

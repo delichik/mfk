@@ -27,11 +27,9 @@ func generateCreate(source *bytes.Buffer, target Target) {
 		}
 
 		fieldName := field.Name
-		fieldJsonName := field.Name
-
-		if tag != "" {
-			parts := strings.Split(tag, ",")
-			fieldJsonName = parts[0]
+		fieldConfig := parseFieldConfig(field)
+		if fieldConfig.Skipped {
+			continue
 		}
 
 		fieldType := field.Type
@@ -46,7 +44,7 @@ func generateCreate(source *bytes.Buffer, target Target) {
 
 		asString := adapter.AsString(fieldType)
 
-		source.WriteString(fmt.Sprintf("columnString += \"%s\"\n", fieldJsonName))
+		source.WriteString(fmt.Sprintf("columnString += \"%s\"\n", fieldConfig.ColumnName))
 		source.WriteString("columnString += \",\"\n")
 		source.WriteString(strings.ReplaceAll("columnValueString += "+asString+"\n", "${fieldName}", "m."+fieldName))
 		source.WriteString("columnValueString += \",\"\n")
