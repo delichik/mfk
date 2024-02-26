@@ -72,7 +72,7 @@ func RunPlugin(options *Options) {
 			}
 			plugin, ok := registeredPlugins[req.call]
 			if !ok {
-				send(os.Stdout, &sendObject2{
+				send(os.Stdout, &sendObject{
 					id:      req.id,
 					call:    req.call + _CALL_REPLY,
 					content: []byte(""),
@@ -82,14 +82,14 @@ func RunPlugin(options *Options) {
 			rsp, err := plugin.Handle(req.content)
 			if err != nil {
 				logger.Error("plugin handle failed", zap.String("call", req.call), zap.Error(err))
-				send(os.Stdout, &sendObject2{
+				send(os.Stdout, &sendObject{
 					id:      req.id,
 					call:    req.call + _CALL_REPLY,
 					content: []byte(err.Error()),
 				})
 				continue
 			}
-			send(os.Stdout, &sendObject2{
+			send(os.Stdout, &sendObject{
 				id:      req.id,
 				call:    req.call + _CALL_REPLY,
 				content: rsp,

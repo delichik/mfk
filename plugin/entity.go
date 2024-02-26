@@ -21,6 +21,7 @@ type callResponse struct {
 }
 
 type Entity struct {
+	name string
 	cmd  *exec.Cmd
 	host *Host
 
@@ -36,9 +37,10 @@ type Entity struct {
 	callIDIndex atomic.Uint64
 }
 
-func newEntity(cmd *exec.Cmd, host *Host) *Entity {
+func newEntity(name string, cmd *exec.Cmd, host *Host) *Entity {
 	ctx, cancel := context.WithCancel(context.Background())
 	e := &Entity{
+		name:   name,
 		cmd:    cmd,
 		host:   host,
 		ctx:    ctx,
@@ -119,9 +121,9 @@ func (e *Entity) Start() error {
 	return nil
 }
 
-func (e *Entity) newReplyFunc(id uint64, cmd string) func(data []byte) {
-	return func(data []byte) {
-		send(e.pluginInput, &sendObject2{
+func (e *Entity) newReplyFunc(id uint64, cmd string) func(data []byte) error {
+	return func(data []byte) error {
+		return send(e.pluginInput, &sendObject{
 			id:      id,
 			call:    cmd + _CALL_REPLY,
 			content: data,
@@ -135,7 +137,7 @@ func (e *Entity) Stop() error {
 }
 
 func (e *Entity) Call(call string, data []byte) error {
-	req := &sendObject2{
+	req := &sendObject{
 		id:      e.callIDIndex.Add(1),
 		call:    call,
 		content: data,
@@ -144,7 +146,7 @@ func (e *Entity) Call(call string, data []byte) error {
 }
 
 func (e *Entity) CallWithResponse(call string, data []byte) ([]byte, error) {
-	req := &sendObject2{
+	req := &sendObject{
 		id:      e.callIDIndex.Add(1),
 		call:    call,
 		content: data,

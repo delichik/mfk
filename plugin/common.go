@@ -15,14 +15,13 @@ import (
 )
 
 const (
-	_ORDER_PREFIX = "__mfk_plugin_order__"
-	_SPLITER      = "|/|"
+	_ORDER_PREFIX = "\n\n__mfk_plugin_order__"
+	_SPLITER      = "|"
 	_CALL_LOGGER  = "logger"
 	_CALL_REPLY   = "_reply"
 )
 
-var _SAFE_CALL_LOGGER = base64.StdEncoding.EncodeToString([]byte(_CALL_LOGGER))
-
+var safeCallCache sync.Map
 var locker sync.Mutex
 
 func LogDriver() zapcore.WriteSyncer {
@@ -34,10 +33,13 @@ type logWriter struct {
 }
 
 func (w *logWriter) Write(data []byte) (n int, err error) {
-	safeData := base64.StdEncoding.EncodeToString(data)
-	locker.Lock()
-	defer locker.Unlock()
-	return fmt.Fprintln(w.writer, _ORDER_PREFIX+_SAFE_CALL_LOGGER+_SPLITER+safeData)
+	req := &sendObject{
+		id:      0,
+		call:    _CALL_LOGGER,
+		content: data,
+	}
+	err = send(w.writer, req)
+	return len(data), err
 }
 
 func (w *logWriter) Sync() error {
@@ -45,25 +47,45 @@ func (w *logWriter) Sync() error {
 }
 
 type sendObject struct {
+	id      uint64
+	call    string
+	content []byte
 	err     error
-	id      uint64
-	call    string
-	content []byte
 }
 
-type sendObject2 struct {
-	id      uint64
-	call    string
-	content []byte
-}
-
-func send(writer io.Writer, r *sendObject2) error {
-	safeCall := base64.StdEncoding.EncodeToString([]byte(r.call))
+func send(writer io.Writer, r *sendObject) error {
 	safeData := base64.StdEncoding.EncodeToString(r.content)
+	safeCall := ""
+	t, loaded := safeCallCache.Load(r.call)
+	if loaded {
+		safeCall = t.(string)
+	} else {
+		safeCall = base64.StdEncoding.EncodeToString([]byte(r.call))
+		safeCallCache.Store(r.call, safeCall)
+	}
+
 	locker.Lock()
 	defer locker.Unlock()
-	_, err := fmt.Fprintln(writer, _ORDER_PREFIX+strconv.FormatUint(r.id, 10)+_SPLITER+safeCall+_SPLITER+safeData)
-	return err
+
+	if _, err := fmt.Fprintln(writer, _ORDER_PREFIX); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(writer, strconv.FormatUint(r.id, 10)); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(writer, _SPLITER); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(writer, safeCall); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(writer, _SPLITER); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(writer, safeData); err != nil {
+		return err
+	}
+	return nil
 }
 
 func read(reader *bufio.Reader) (*sendObject, error) {

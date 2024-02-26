@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/vmihailenco/msgpack"
 	"go.uber.org/zap"
@@ -48,10 +49,11 @@ func (h *Host) Load(pluginPath string) error {
 		if entry.IsDir() {
 			continue
 		}
-		logger.Info("load plugin", zap.String("name", entry.Name()))
+		name := strings.TrimSuffix(entry.Name(), ".exe")
+		logger.Info("load plugin", zap.String("name", name))
 		cmd := exec.Command(pluginPath+"/"+entry.Name(), "-h", handshakeStr)
-		h.plugins[entry.Name()] = newEntity(cmd, h)
-		err = h.plugins[entry.Name()].Start()
+		h.plugins[name] = newEntity(name, cmd, h)
+		err = h.plugins[name].Start()
 		if err != nil {
 			logger.Error("fail to load plugin", zap.String("name", entry.Name()), zap.Error(err))
 		}
@@ -75,10 +77,10 @@ func (h *Host) Notice(call string, data []byte) ([]byte, error) {
 	return []byte(""), nil
 }
 
-func (h *Host) dispatchCall(e *Entity, call string, data []byte, replyFunc func([]byte)) {
+func (h *Host) dispatchCall(e *Entity, call string, data []byte, replyFunc func([]byte) error) {
 	switch call {
 	case _CALL_LOGGER:
-		log(e.cmd.Path, data)
+		log(e.name, data)
 	default:
 		reply, err := h.e.OnCall(call, data)
 		if err != nil {
