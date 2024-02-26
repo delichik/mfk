@@ -1,6 +1,6 @@
-//go:build debug
+//go:build debugable
 
-package tracked
+package debug
 
 import (
 	"sync"
@@ -8,25 +8,25 @@ import (
 
 	"go.uber.org/zap"
 
-	"vap/pkg/logger"
+	"github.com/delichik/mfk/logger"
 )
 
-type RWMutex struct {
-	sync.RWMutex
+type Mutex struct {
+	sync.Mutex
 	AlertTimeout time.Duration
 }
 
-func (m *RWMutex) Lock() {
+func (m *Mutex) Lock() {
 	start := time.Now()
-	m.RWMutex.Lock()
+	m.Mutex.Lock()
 	if m.AlertTimeout > 0 && start.Sub(time.Now()) > m.AlertTimeout {
 		logger.Warn("Lock() takes a long time to finish", zap.StackSkip("stack", 2))
 	}
 }
 
-func (m *RWMutex) Unlock() {
+func (m *Mutex) Unlock() {
 	start := time.Now()
-	m.RWMutex.Unlock()
+	m.Mutex.Unlock()
 	if m.AlertTimeout > 0 && start.Sub(time.Now()) > m.AlertTimeout {
 		logger.Warn("Unlock() takes a long time to finish", zap.StackSkip("stack", 2))
 	}

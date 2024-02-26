@@ -1,12 +1,14 @@
-//go:build debug
+//go:build debugable
 
-package tracked
+package debug
 
 import (
 	"sync"
 	"time"
 
-	"vap/pkg/logger"
+	"go.uber.org/zap"
+
+	"github.com/delichik/mfk/logger"
 )
 
 type RWMutex struct {
