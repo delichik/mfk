@@ -1,4 +1,4 @@
-//go:build debugable
+//go:build debuggable
 
 package debug
 
