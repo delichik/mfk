@@ -90,7 +90,8 @@ func Run(version string) {
 		if module.AdditionalLogger() {
 			c := logger.GetDefaultConfig()
 			c.LogPath = "logs/" + module.Name() + ".log"
-			config.RegisterModuleConfig(module.Name()+"-logger", c)
+			c.ModePrefix = module.Name() + "-"
+			config.RegisterModuleConfig(c)
 		}
 	}
 

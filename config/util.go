@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	myyaml "github.com/delichik/mfk/yaml"
 	ghodssyaml "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v3"
+
+	myyaml "github.com/delichik/mfk/yaml"
 )
 
 func load(path string) (*Config, error) {
@@ -81,4 +82,13 @@ func FromJson(moduleName string, b []byte) (ModuleConfig, error) {
 	}
 	err = yaml.Unmarshal(yamlContent, mdc)
 	return mdc, err
+}
+
+func GetConfig[T ModuleConfig](cfg ModuleConfig) T {
+	moduleConfig, ok := cfg.(T)
+	if !ok {
+		panic("invalid config")
+	}
+
+	return moduleConfig
 }
