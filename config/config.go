@@ -12,8 +12,6 @@ type ConfigSet interface {
 }
 
 type ModuleConfig interface {
-	// Name 模块配置名称
-	Name() string
 	// Check 预检查错误
 	Check() error
 	// Clone 深度拷贝内容并返回
@@ -40,13 +38,13 @@ func (c *Config) String() string {
 	return string(b)
 }
 
-func RegisterModuleConfig(defaultConfig ModuleConfig) {
-	_, ok := moduleDefaultConfigs[defaultConfig.Name()]
+func RegisterModuleConfig(name string, defaultConfig ModuleConfig) {
+	_, ok := moduleDefaultConfigs[name]
 	if ok {
-		panic(fmt.Errorf("module name %s existed", defaultConfig.Name()))
+		panic(fmt.Errorf("module name %s existed", name))
 	}
 
-	moduleDefaultConfigs[defaultConfig.Name()] = defaultConfig
+	moduleDefaultConfigs[name] = defaultConfig
 }
 
 func Load(path string) (*Config, error) {

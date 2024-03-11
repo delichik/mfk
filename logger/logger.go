@@ -19,7 +19,7 @@ const (
 var defaultLoggerConfig = &Config{
 	Level:     "info",
 	Format:    "text",
-	LogPath:   "logs/logger.log",
+	LogPath:   "stdout",
 	MaxSize:   50,
 	MaxBackup: 1,
 	MaxAge:    30,
@@ -28,7 +28,7 @@ var defaultLoggerConfig = &Config{
 }
 
 func init() {
-	config.RegisterModuleConfig(defaultLoggerConfig)
+	config.RegisterModuleConfig(ModuleName, defaultLoggerConfig)
 }
 
 type Config struct {
@@ -42,10 +42,6 @@ type Config struct {
 
 	logLevel   zapcore.Level `yaml:"-"`
 	ModePrefix string        `yaml:"-"`
-}
-
-func (c *Config) Name() string {
-	return c.ModePrefix + ModuleName
 }
 
 func (c *Config) Check() error {
@@ -95,16 +91,31 @@ var defaultLogger *zap.Logger
 var loggers = make(map[string]*zap.Logger)
 
 func InitDefault(c config.ConfigSet) {
-	defaultLogger = Init(ModuleName, c)
+	defaultLogger = Init("", c)
 }
 
-func GetDefaultConfig() *Config {
-	return defaultLoggerConfig.Clone().(*Config)
+func RegisterAdditionalLogger(moduleName string) {
+	if moduleName == "" {
+		return
+	}
+
+	cfg := defaultLoggerConfig.Clone().(*Config)
+	if moduleName != "" {
+		cfg.LogPath = "logs/" + moduleName + ".log"
+		name := moduleName + "-" + ModuleName
+		config.RegisterModuleConfig(name, cfg)
+	}
+	return
 }
 
-func Init(name string, c config.ConfigSet) *zap.Logger {
+func Init(moduleName string, c config.ConfigSet) *zap.Logger {
+	if moduleName == "" {
+		moduleName = ModuleName
+	} else {
+		moduleName = moduleName + "-" + ModuleName
+	}
 	var loggerConfig *Config
-	t := c.GetModuleConfig(name)
+	t := c.GetModuleConfig(moduleName)
 	if t == nil || t.(*Config) == nil {
 		loggerConfig = defaultLoggerConfig
 	} else {
@@ -128,7 +139,7 @@ func Init(name string, c config.ConfigSet) *zap.Logger {
 	} else if loggerConfig.Format == "text" {
 		core = zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), writeSyncer, loggerConfig.logLevel)
 	}
-	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
-	loggers[name] = l
+	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.WithCaller(true), zap.AddCallerSkip(1))
+	loggers[moduleName] = l
 	return l
 }
