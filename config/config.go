@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 
 	myyaml "github.com/delichik/mfk/yaml"
 )
@@ -38,13 +38,13 @@ func (c *Config) String() string {
 	return string(b)
 }
 
-func RegisterModuleConfig(moduleName string, defaultConfig ModuleConfig) {
-	_, ok := moduleDefaultConfigs[moduleName]
+func RegisterModuleConfig(name string, defaultConfig ModuleConfig) {
+	_, ok := moduleDefaultConfigs[name]
 	if ok {
-		panic(errors.New("module name existed"))
+		panic(fmt.Errorf("module name %s existed", name))
 	}
 
-	moduleDefaultConfigs[moduleName] = defaultConfig
+	moduleDefaultConfigs[name] = defaultConfig
 }
 
 func Load(path string) (*Config, error) {

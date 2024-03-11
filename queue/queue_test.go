@@ -9,7 +9,7 @@ import (
 )
 
 func BenchmarkDequeueQueueSingle(b *testing.B) {
-	q := New(0)
+	q := New[int](0)
 	for i := 0; i < b.N; i++ {
 		_ = q.Enqueue(1)
 	}
@@ -26,7 +26,7 @@ func TestQueue(t *testing.T) {
 		t.Error("Then count of CPU cores is less than 3")
 		t.Fail()
 	}
-	q := New(100)
+	q := New[int](100)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}

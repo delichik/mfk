@@ -28,6 +28,10 @@ func (m *NoConfigModule) AdditionalLogger() bool {
 	return false
 }
 
+func (m *NoConfigModule) DefaultConfig() config.ModuleConfig {
+	return nil
+}
+
 func (m *NoConfigModule) ApplyConfig(_ config.ModuleConfig) error {
 	return nil
 }
@@ -44,8 +48,8 @@ func (m *ConfigRequiredModule) SetConfigManager(_ *config.Manager) {}
 
 type InitializerModule struct{}
 
-func (m *InitializerModule) Run(_ context.Context) error {
+func (m *InitializerModule) OnRun(_ context.Context) error {
 	return nil
 }
 
-func (m *InitializerModule) Exit() {}
+func (m *InitializerModule) OnExit() {}

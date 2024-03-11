@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -18,19 +17,19 @@ import (
 )
 
 var (
-	ctx                 context.Context
-	cancel              context.CancelFunc
+	gCtx                context.Context
+	gCancel             context.CancelFunc
 	cm                  *config.Manager
 	beforeRunCall       func()
 	afterRunCall        func()
-	modules             map[string]Module
-	orderedModules      []Module
+	modules             map[string]*ModuleEntry
+	orderedModules      []*ModuleEntry
 	autoLoadModuleCount int
 )
 
 func init() {
-	ctx, cancel = context.WithCancel(context.Background())
-	modules = map[string]Module{}
+	gCtx, gCancel = context.WithCancel(context.Background())
+	modules = map[string]*ModuleEntry{}
 }
 
 type CommandLineVars struct {
@@ -57,18 +56,31 @@ func parseFlags(version string) CommandLineVars {
 	return clvs
 }
 
-func RegisterAutoLoadModule(module Module) {
-	RegisterModule(module)
+func RegisterAutoLoadModule[T config.ModuleConfig](module Module[T], cfg ...T) {
+	registerModule(module, cfg...)
 	autoLoadModuleCount++
 }
 
-func RegisterModule(module Module) {
-	_, ok := modules[module.Name()]
-	if ok {
-		panic(errors.New("module " + module.Name() + " already registered"))
+func RegisterModule[T config.ModuleConfig](module Module[T], cfg ...T) {
+	registerModule(module, cfg...)
+}
+
+func registerModule[T config.ModuleConfig](module Module[T], cfg ...T) {
+	if len(cfg) > 1 {
+		panic("")
 	}
-	modules[module.Name()] = module
-	orderedModules = append(orderedModules, module)
+	existedMoudle, ok := modules[module.Name()]
+	if ok {
+		panic(fmt.Errorf("module %s already registered by %s",
+			existedMoudle.Name(), existedMoudle.registerer))
+	}
+
+	moduleEntry := newModuleEntry(module)
+	modules[module.Name()] = moduleEntry
+	orderedModules = append(orderedModules, moduleEntry)
+	if len(cfg) > 0 {
+		config.RegisterModuleConfig(module.Name(), cfg[0])
+	}
 }
 
 func BeforeRun(call func()) {
@@ -80,30 +92,31 @@ func AfterRun(call func()) {
 }
 
 func Run(version string) {
+	ctx, cancel := context.WithCancel(context.Background())
 	clvs := parseFlags(version)
 	cm = config.NewManager(ctx, clvs.ConfigPath)
 	for _, module := range orderedModules {
+
 		module.SetConfigManager(cm)
 		if !module.ConfigRequired() {
 			continue
 		}
 		if module.AdditionalLogger() {
-			c := logger.GetDefaultConfig()
-			c.LogPath = "logs/" + module.Name() + ".log"
-			config.RegisterModuleConfig(module.Name()+"-logger", c)
+			logger.RegisterAdditionalLogger(module.Name())
 		}
 	}
 
 	err := cm.Init()
 	if err != nil {
 		log.Printf("Init config failed: %s, exit", err.Error())
+		cancel()
 		return
 	}
 	cm.SetReloadCallback(ReloadConfig)
 	logger.InitDefault(cm)
 	for _, module := range orderedModules {
 		if module.AdditionalLogger() {
-			logger.Init(module.Name()+"-logger", cm)
+			logger.Init(module.Name(), cm)
 		}
 	}
 	logger.Info("App init", zap.String("version", version))
@@ -130,7 +143,7 @@ func Run(version string) {
 					zap.Error(err))
 			}
 		}
-		err = module.Run(ctx)
+		err = module.OnRun(ctx)
 		if err != nil {
 			logger.Fatal("Run module failed",
 				zap.String("name", module.Name()),
@@ -144,7 +157,10 @@ func Run(version string) {
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGABRT, syscall.SIGTERM, syscall.SIGQUIT)
-	<-signalChan
+	select {
+	case <-signalChan:
+	case <-gCtx.Done():
+	}
 	signal.Stop(signalChan)
 	logger.Info("App shutdown")
 
@@ -156,8 +172,12 @@ func Run(version string) {
 				continue
 			}
 		}
-		module.Exit()
+		module.OnExit()
 	}
+}
+
+func Shutdown() {
+	gCancel()
 }
 
 func ReloadConfig(name string, cfg config.ModuleConfig) {

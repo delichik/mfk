@@ -19,7 +19,7 @@ const (
 var defaultLoggerConfig = &Config{
 	Level:     "info",
 	Format:    "text",
-	LogPath:   "logs/logger.log",
+	LogPath:   "stdout",
 	MaxSize:   50,
 	MaxBackup: 1,
 	MaxAge:    30,
@@ -34,13 +34,14 @@ func init() {
 type Config struct {
 	Level     string `yaml:"level" comment:"Min log output level"`
 	Format    string `yaml:"format" comment:"Log output format: json|text"`
-	LogPath   string `yaml:"log_path" comment:"Path to write log, use \"stdout\" to write to console"`
-	MaxSize   int    `yaml:"max_size" comment:"Maximum size (MB) of a log file"`
-	MaxBackup int    `yaml:"max_backup" comment:"Maximum count of log backup"`
-	MaxAge    int    `yaml:"max_age" comment:"Maximum saving days of a log backup"`
+	LogPath   string `yaml:"log-path" comment:"Path to write log, use \"stdout\" to write to console"`
+	MaxSize   int    `yaml:"max-size" comment:"Maximum size (MB) of a log file"`
+	MaxBackup int    `yaml:"max-backup" comment:"Maximum count of log backup"`
+	MaxAge    int    `yaml:"max-age" comment:"Maximum saving days of a log backup"`
 	Compress  bool   `yaml:"compress" comment:"Compress the backups"`
 
-	logLevel zapcore.Level `yaml:"-"`
+	logLevel   zapcore.Level `yaml:"-"`
+	ModePrefix string        `yaml:"-"`
 }
 
 func (c *Config) Check() error {
@@ -90,16 +91,31 @@ var defaultLogger *zap.Logger
 var loggers = make(map[string]*zap.Logger)
 
 func InitDefault(c config.ConfigSet) {
-	defaultLogger = Init(ModuleName, c)
+	defaultLogger = Init("", c)
 }
 
-func GetDefaultConfig() *Config {
-	return defaultLoggerConfig.Clone().(*Config)
+func RegisterAdditionalLogger(moduleName string) {
+	if moduleName == "" {
+		return
+	}
+
+	cfg := defaultLoggerConfig.Clone().(*Config)
+	if moduleName != "" {
+		cfg.LogPath = "logs/" + moduleName + ".log"
+		name := moduleName + "-" + ModuleName
+		config.RegisterModuleConfig(name, cfg)
+	}
+	return
 }
 
-func Init(name string, c config.ConfigSet) *zap.Logger {
+func Init(moduleName string, c config.ConfigSet) *zap.Logger {
+	if moduleName == "" {
+		moduleName = ModuleName
+	} else {
+		moduleName = moduleName + "-" + ModuleName
+	}
 	var loggerConfig *Config
-	t := c.GetModuleConfig(name)
+	t := c.GetModuleConfig(moduleName)
 	if t == nil || t.(*Config) == nil {
 		loggerConfig = defaultLoggerConfig
 	} else {
@@ -123,7 +139,7 @@ func Init(name string, c config.ConfigSet) *zap.Logger {
 	} else if loggerConfig.Format == "text" {
 		core = zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), writeSyncer, loggerConfig.logLevel)
 	}
-	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.AddCaller())
-	loggers[name] = l
+	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.WithCaller(true), zap.AddCallerSkip(1))
+	loggers[moduleName] = l
 	return l
 }

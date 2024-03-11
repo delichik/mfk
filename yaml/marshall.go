@@ -9,7 +9,7 @@ import (
 
 // MarshallWithComments 编码 yaml 并读取 comment 标签作为注释写入到编码后的 yaml 字符串中
 // 速度很慢，适合少量使用的情况
-func MarshallWithComments(obj interface{}) ([]byte, error) {
+func MarshallWithComments(obj any) ([]byte, error) {
 	n := &yaml.Node{}
 	v := reflect.ValueOf(obj)
 	if !v.IsValid() {
@@ -25,7 +25,7 @@ func MarshallWithComments(obj interface{}) ([]byte, error) {
 
 // AddComments 读取 comment 标签作为注释写入到 yaml.Node 中
 // 速度很慢，适合少量使用的情况
-func AddComments(node *yaml.Node, obj interface{}) error {
+func AddComments(node *yaml.Node, obj any) error {
 	v := reflect.ValueOf(obj)
 	if !v.IsValid() {
 		return errors.New("invalid object")
