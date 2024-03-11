@@ -14,8 +14,8 @@ import (
 const ModuleName = "demo_module"
 
 type DemoModuleConfig struct {
-	ListenAddr string `yaml:"listen_addr" comment:"Address to listen, 0.0.0.0 for default"`
-	ListenPort int    `yaml:"listen_port" comment:"Port to listen, 80 for default"`
+	ListenAddr string `yaml:"listen-addr" comment:"Address to listen, 0.0.0.0 for default"`
+	ListenPort int    `yaml:"listen-port" comment:"Port to listen, 80 for default"`
 }
 
 func (c *DemoModuleConfig) Check() error {

@@ -34,10 +34,10 @@ func init() {
 type Config struct {
 	Level     string `yaml:"level" comment:"Min log output level"`
 	Format    string `yaml:"format" comment:"Log output format: json|text"`
-	LogPath   string `yaml:"log_path" comment:"Path to write log, use \"stdout\" to write to console"`
-	MaxSize   int    `yaml:"max_size" comment:"Maximum size (MB) of a log file"`
-	MaxBackup int    `yaml:"max_backup" comment:"Maximum count of log backup"`
-	MaxAge    int    `yaml:"max_age" comment:"Maximum saving days of a log backup"`
+	LogPath   string `yaml:"log-path" comment:"Path to write log, use \"stdout\" to write to console"`
+	MaxSize   int    `yaml:"max-size" comment:"Maximum size (MB) of a log file"`
+	MaxBackup int    `yaml:"max-backup" comment:"Maximum count of log backup"`
+	MaxAge    int    `yaml:"max-age" comment:"Maximum saving days of a log backup"`
 	Compress  bool   `yaml:"compress" comment:"Compress the backups"`
 
 	logLevel   zapcore.Level `yaml:"-"`
