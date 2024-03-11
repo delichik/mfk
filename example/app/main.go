@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/delichik/mfk/app"
-	"github.com/delichik/mfk/config"
-	"github.com/delichik/mfk/logger"
-	"github.com/delichik/mfk/utils"
+	"github.com/delichik/daf/app"
+	"github.com/delichik/daf/config"
+	"github.com/delichik/daf/logger"
+	"github.com/delichik/daf/utils"
 )
 
 const ModuleName = "demo_module"

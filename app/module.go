@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/delichik/mfk/config"
+	"github.com/delichik/daf/config"
 )
 
 type Module[T config.ModuleConfig] interface {

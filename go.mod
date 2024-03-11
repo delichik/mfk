@@ -1,4 +1,4 @@
-module github.com/delichik/mfk
+module github.com/delichik/daf
 
 go 1.21
 

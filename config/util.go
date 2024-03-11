@@ -8,7 +8,7 @@ import (
 	ghodssyaml "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v3"
 
-	myyaml "github.com/delichik/mfk/yaml"
+	myyaml "github.com/delichik/daf/yaml"
 )
 
 func load(path string) (*Config, error) {

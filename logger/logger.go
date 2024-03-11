@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/delichik/mfk/config"
+	"github.com/delichik/daf/config"
 )
 
 const (

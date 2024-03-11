@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/delichik/mfk/wrapper"
+	"github.com/delichik/daf/wrapper"
 )
 
 type Queue[T any] struct {

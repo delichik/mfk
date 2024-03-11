@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/delichik/mfk/config"
+	"github.com/delichik/daf/config"
 )
 
 type AdditionalLoggerModule struct{}

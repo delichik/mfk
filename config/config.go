@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	myyaml "github.com/delichik/mfk/yaml"
+	myyaml "github.com/delichik/daf/yaml"
 )
 
 type ConfigSet interface {

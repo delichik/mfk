@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/delichik/mfk/config"
+	"github.com/delichik/daf/config"
 )
 
 func TestConfig_NewLogger(t *testing.T) {

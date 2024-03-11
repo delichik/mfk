@@ -12,8 +12,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/delichik/mfk/config"
-	"github.com/delichik/mfk/logger"
+	"github.com/delichik/daf/config"
+	"github.com/delichik/daf/logger"
 )
 
 var (
