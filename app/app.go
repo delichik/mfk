@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"reflect"
 	"runtime"
 	"syscall"
 
@@ -56,30 +57,28 @@ func parseFlags(version string) CommandLineVars {
 	return clvs
 }
 
-func RegisterAutoLoadModule[T config.ModuleConfig](module Module[T], cfg ...T) {
-	registerModule(module, cfg...)
+func RegisterAutoLoadModule[T config.ModuleConfig](module Module[T], cfg T) {
+	registerModule(module, cfg)
 	autoLoadModuleCount++
 }
 
-func RegisterModule[T config.ModuleConfig](module Module[T], cfg ...T) {
-	registerModule(module, cfg...)
+func RegisterModule[T config.ModuleConfig](module Module[T], cfg T) {
+	registerModule(module, cfg)
 }
 
-func registerModule[T config.ModuleConfig](module Module[T], cfg ...T) {
-	if len(cfg) > 1 {
-		panic("")
-	}
-	existedMoudle, ok := modules[module.Name()]
+func registerModule[T config.ModuleConfig](module Module[T], cfg T) {
+	existedModule, ok := modules[module.Name()]
 	if ok {
 		panic(fmt.Errorf("module %s already registered by %s",
-			existedMoudle.Name(), existedMoudle.registerer))
+			existedModule.Name(), existedModule.registerer))
 	}
 
 	moduleEntry := newModuleEntry(module)
 	modules[module.Name()] = moduleEntry
 	orderedModules = append(orderedModules, moduleEntry)
-	if len(cfg) > 0 {
-		config.RegisterModuleConfig(module.Name(), cfg[0])
+
+	if !reflect.TypeOf(cfg).Implements(noConfigIfaceType) {
+		config.RegisterModuleConfig(module.Name(), cfg)
 	}
 }
 
@@ -98,7 +97,7 @@ func Run(version string) {
 	for _, module := range orderedModules {
 
 		module.SetConfigManager(cm)
-		if !module.ConfigRequired() {
+		if module.noConfig {
 			continue
 		}
 		if module.AdditionalLogger() {
@@ -129,7 +128,7 @@ func Run(version string) {
 		logger.Debug("Prepare module",
 			zap.String("name", module.Name()),
 			zap.Bool("auto_loaded", i < autoLoadModuleCount))
-		if module.ConfigRequired() {
+		if !module.noConfig {
 			cfg := cm.GetModuleConfig(module.Name())
 			if cfg == nil {
 				logger.Warn("Skip module", zap.String("name", module.Name()))
@@ -166,7 +165,7 @@ func Run(version string) {
 
 	cancel()
 	for _, module := range orderedModules {
-		if module.ConfigRequired() {
+		if !module.noConfig {
 			cfg := cm.GetModuleConfig(module.Name())
 			if cfg == nil {
 				continue

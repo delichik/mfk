@@ -13,9 +13,6 @@ type Module[T config.ModuleConfig] interface {
 	// Name 返回模块的名字，所有模块名字不能重复
 	Name() string
 
-	// ConfigRequired 返回是否需要配置
-	ConfigRequired() bool
-
 	// ApplyConfig 触发配置应用，当启动和配置发生变化时会被调用
 	ApplyConfig(cfg T) error
 
@@ -34,9 +31,9 @@ type Module[T config.ModuleConfig] interface {
 type ModuleEntry struct {
 	module     any
 	registerer string
+	noConfig   bool
 
 	Name             func() string
-	ConfigRequired   func() bool
 	ApplyConfig      func(cfg config.ModuleConfig) error
 	OnRun            func(ctx context.Context) error
 	AdditionalLogger func() bool
@@ -65,12 +62,6 @@ func newModuleEntry(module any) *ModuleEntry {
 		fn := rv.MethodByName("Name")
 		res := fn.Call([]reflect.Value{})
 		return (res[0].Interface()).(string)
-	}
-
-	moduleEntry.ConfigRequired = func() bool {
-		fn := rv.MethodByName("ConfigRequired")
-		res := fn.Call([]reflect.Value{})
-		return (res[0].Interface()).(bool)
 	}
 
 	moduleEntry.ApplyConfig = func(cfg config.ModuleConfig) error {

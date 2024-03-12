@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -139,6 +140,7 @@ func Init(moduleName string, c config.ConfigSet) *zap.Logger {
 	} else if loggerConfig.Format == "text" {
 		core = zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), writeSyncer, loggerConfig.logLevel)
 	}
+	zapcore.TimeEncoderOfLayout(time.RFC3339)
 	l := zap.New(core, zap.AddStacktrace(zap.ErrorLevel), zap.WithCaller(true), zap.AddCallerSkip(1))
 	loggers[moduleName] = l
 	return l
