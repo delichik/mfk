@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -57,16 +58,16 @@ func parseFlags(version string) CommandLineVars {
 	return clvs
 }
 
-func RegisterAutoLoadModule[T config.ModuleConfig](module Module[T], cfg T) {
-	registerModule(module, cfg)
+func RegisterAutoLoadModule[T config.ModuleConfig](module Module[T]) {
+	registerModule(module)
 	autoLoadModuleCount++
 }
 
-func RegisterModule[T config.ModuleConfig](module Module[T], cfg T) {
-	registerModule(module, cfg)
+func RegisterModule[T config.ModuleConfig](module Module[T]) {
+	registerModule(module)
 }
 
-func registerModule[T config.ModuleConfig](module Module[T], cfg T) {
+func registerModule[T config.ModuleConfig](module Module[T]) {
 	existedModule, ok := modules[module.Name()]
 	if ok {
 		panic(fmt.Errorf("module %s already registered by %s",
@@ -77,7 +78,9 @@ func registerModule[T config.ModuleConfig](module Module[T], cfg T) {
 	modules[module.Name()] = moduleEntry
 	orderedModules = append(orderedModules, moduleEntry)
 
-	if !reflect.TypeOf(cfg).Implements(noConfigIfaceType) {
+	var cfg T
+	rt := reflect.TypeOf(cfg)
+	if !rt.Implements(noConfigIfaceType) {
 		config.RegisterModuleConfig(module.Name(), cfg)
 	}
 }
@@ -187,8 +190,16 @@ func ReloadConfig(name string, cfg config.ModuleConfig) {
 	logger.Info("Reloading module config", zap.String("name", name))
 	err := module.ApplyConfig(cfg)
 	if err != nil {
-		logger.Error("Apply module config failed",
-			zap.String("name", name),
-			zap.Error(err))
+		var fatalError *FatalError
+		ok = errors.As(err, &fatalError)
+		if ok {
+			logger.Fatal("Apply module config failed with fatal error",
+				zap.String("name", name),
+				zap.Error(fatalError))
+		} else {
+			logger.Error("Apply module config failed",
+				zap.String("name", name),
+				zap.Error(err))
+		}
 	}
 }
