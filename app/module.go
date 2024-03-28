@@ -16,8 +16,11 @@ type Module[T config.ModuleConfig] interface {
 	// ApplyConfig 触发配置应用，当启动和配置发生变化时会被调用
 	ApplyConfig(cfg T) error
 
+	// OnInit 初始化模块，当应用初始化时会被调用
+	OnInit(ctx context.Context) error
+
 	// OnRun 启动模块，当应用启动时会被调用
-	OnRun(ctx context.Context) error
+	OnRun() error
 
 	// AdditionalLogger 返回是否需要额外的日志记录
 	AdditionalLogger() bool
@@ -35,6 +38,7 @@ type ModuleEntry struct {
 
 	_funName             reflect.Value
 	_funApplyConfig      reflect.Value
+	_funOnInit           reflect.Value
 	_funOnRun            reflect.Value
 	_funAdditionalLogger reflect.Value
 	_funOnExit           reflect.Value
@@ -42,7 +46,8 @@ type ModuleEntry struct {
 
 	Name             func() string
 	ApplyConfig      func(cfg config.ModuleConfig) error
-	OnRun            func(ctx context.Context) error
+	OnInit           func(ctx context.Context) error
+	OnRun            func() error
 	AdditionalLogger func() bool
 	OnExit           func()
 	SetConfigManager func(cm *config.Manager)
@@ -77,9 +82,15 @@ func newModuleEntry(module any) *ModuleEntry {
 		return nullableError(res[0].Interface())
 	}
 
+	moduleEntry._funOnInit = rv.MethodByName("OnInit")
+	moduleEntry.OnInit = func(ctx context.Context) error {
+		res := moduleEntry._funOnInit.Call([]reflect.Value{reflect.ValueOf(ctx)})
+		return nullableError(res[0].Interface())
+	}
+
 	moduleEntry._funOnRun = rv.MethodByName("OnRun")
-	moduleEntry.OnRun = func(ctx context.Context) error {
-		res := moduleEntry._funOnRun.Call([]reflect.Value{reflect.ValueOf(ctx)})
+	moduleEntry.OnRun = func() error {
+		res := moduleEntry._funOnRun.Call([]reflect.Value{})
 		return nullableError(res[0].Interface())
 	}
 
